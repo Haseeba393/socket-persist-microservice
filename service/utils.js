@@ -12,16 +12,16 @@ async function isUserAlreadyExist(userId, users) {
 
     // Finding user
     users.forEach(element => {
-        if(element.userId == userId)
+        if (element.userId == userId)
             user = element;
     });
 
     // Filtering users array
-    users = users.filter((element, index)=>{
+    users = users.filter((element, index) => {
         return (element.userId != userId)
     });
 
-    if(user != undefined)
+    if (user != undefined)
         return { isFound: true, user: user, filteredUsers: users };
     else
         return { isFound: false };
@@ -31,7 +31,7 @@ async function isUserAlreadyExist(userId, users) {
 async function makeNewSocketConnection(userId, socketId) {
     try {
         let users = await getAllUsers();
-        if(users != undefined && users != null && users.length != 0){
+        if (users != undefined && users != null && users.length != 0) {
 
             // parsing users array
             users = JSON.parse(users);
@@ -40,7 +40,7 @@ async function makeNewSocketConnection(userId, socketId) {
             const response = await isUserAlreadyExist(userId, users);
             let messages = [];
 
-            if(response.isFound){
+            if (response.isFound) {
                 // Changing some attributes
                 let userObj = {
                     ...response.user,
@@ -56,7 +56,7 @@ async function makeNewSocketConnection(userId, socketId) {
                 let msgsResponse = await getUserMessages(userId);
                 messages = msgsResponse.messages;
             }
-            else{
+            else {
                 let userObj = {
                     socketId: socketId,
                     userId: userId,
@@ -74,9 +74,9 @@ async function makeNewSocketConnection(userId, socketId) {
             // Updating Redis
             await redis.setValue('users', JSON.stringify(users));
 
-            return {success: true, messages: messages}
+            return { success: true, messages: messages }
         }
-        else{
+        else {
             // there is no users in redis cache
             let obj = {
                 socketId: socketId,
@@ -85,37 +85,37 @@ async function makeNewSocketConnection(userId, socketId) {
                 connectedAt: new Date().toISOString(),
                 reconnectedAt: new Date().toISOString(),
             }
-            
+
             // save array in redis cache
             await redis.setValue('users', JSON.stringify([obj]));
-        
+
             console.log('users => ', users);
 
-            return {success: true, messages: []}
+            return { success: true, messages: [] }
         }
     } catch (error) {
-        return {success: false, error: error.toString()};
-    }   
+        return { success: false, error: error.toString() };
+    }
 }
 
 // Function to change connected status of user 
 async function disconnectSocketUser(socketId) {
     try {
         let users = await getAllUsers();
-        if(users != undefined && users != null && users.length != 0){
+        if (users != undefined && users != null && users.length != 0) {
             users = JSON.parse(users);
-            
+
             let user = undefined;
 
             // Finding user
-            users.forEach((element, index)=>{
-                if(element.socketId == socketId)
+            users.forEach((element, index) => {
+                if (element.socketId == socketId)
                     user = element;
             });
 
-            if(user != undefined){
+            if (user != undefined) {
                 // poping user out
-                users = users.filter((element, index)=>{
+                users = users.filter((element, index) => {
                     return element.userId != user.userId;
                 });
 
@@ -132,57 +132,57 @@ async function disconnectSocketUser(socketId) {
                 redis.setValue('users', JSON.stringify(users));
 
                 console.log(users);
-                return {success: true};
+                return { success: true };
             }
-            else{
-                return {success: false, error: 'user does not exist'};
+            else {
+                return { success: false, error: 'user does not exist' };
             }
         }
-        else{
-            return {success: false, error: 'user does not exist'};
+        else {
+            return { success: false, error: 'user does not exist' };
         }
     } catch (error) {
-        return {success: false, error: error.toString()};
+        return { success: false, error: error.toString() };
     }
 }
 
 // Function to get user messages
 async function getUserMessages(userId) {
     let messages = await redis.getValue(`${userId}_msgs`);
-    if(messages != undefined && messages != null && messages.length != 0){
+    if (messages != undefined && messages != null && messages.length != 0) {
         // Empty buffer
         await redis.setValue(`${userId}_msgs`, '');
-        
+
         // returning messsages array
-        return {success: true, messages: JSON.parse(messages)};
+        return { success: true, messages: JSON.parse(messages) };
     }
-    else{
-        return {success: false, messages: [], error: 'User do not have any message in buffer'};
+    else {
+        return { success: false, messages: [], error: 'User do not have any message in buffer' };
     }
 }
 
-async function isUserConnected(userId){
-    try {   
+async function isUserConnected(userId) {
+    try {
         let users = await getAllUsers();
-        if(users != undefined && users != null && users.length != 0){
+        if (users != undefined && users != null && users.length != 0) {
             users = JSON.parse(users);
 
             let find = false;
-            users.forEach((element, index)=>{
-                if(element.userId == userId && element.connected)
+            users.forEach((element, index) => {
+                if (element.userId == userId && element.connected)
                     find = true;
             });
 
-            if(find)
-                return { success: true, connected: true }  
+            if (find)
+                return { success: true, connected: true }
             else
-                return {success: true, connected: false}
+                return { success: true, connected: false }
         }
-        else{
-            return {success: false, error: 'user does not exist in redis'}
+        else {
+            return { success: false, error: 'user does not exist in redis' }
         }
     } catch (error) {
-        return {success: false, error: error.toString()};
+        return { success: false, error: error.toString() };
     }
 }
 
@@ -192,38 +192,38 @@ async function handleMessage(userId, message) {
 
         const response = await isUserConnected(userId);
         console.log('response => ', response);
-        if(response.success && response.connected){
+        if (response.success && response.connected) {
             // Emit immediately
             console.log('emit immediately');
-            return {success: true, immediate: true};
+            return { success: true, immediate: true };
         }
-        else if(response.success && !response.connected){
+        else if (response.success && !response.connected) {
             // save message
             let messages = await redis.getValue(`${userId}_msgs`);
-            if(messages != undefined && messages != null && messages.length != 0){
-                
+            if (messages != undefined && messages != null && messages.length != 0) {
+
                 messages = JSON.parse(messages);
 
                 messages.push(message);
 
                 // Update Message buffer
                 await redis.setValue(`${userId}_msgs`, JSON.stringify(messages));
-                
+
                 // returning messsages array
                 console.log('emit immediately false => ', messages);
-                return {success: true, immediate: false};
+                return { success: true, immediate: false };
             }
-            else{
+            else {
                 // Update Message buffer
                 await redis.setValue(`${userId}_msgs`, JSON.stringify([message]));
-                return {success: true, immediate: false};
+                return { success: true, immediate: false };
             }
         }
-        else{
-            return {success: false, error: response.error};
+        else {
+            return { success: false, error: response.error };
         }
     } catch (error) {
-        return {success: false, error: error.toString()};
+        return { success: false, error: error.toString() };
     }
 }
 

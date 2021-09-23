@@ -1,7 +1,7 @@
 var express = require('express');
 const socket = require("socket.io");
 var cors = require('cors');
-var redis = require('./redis/utils');
+var redis = require('./service/utils');
 
 // Configuring environment variables
 require('dotenv').config();
@@ -13,16 +13,16 @@ var socketInstance = undefined;
 let app = express();
 app.use(express.json());
 app.use(cors());
-let PORT = process.env.PORT || 3000; 
+let PORT = process.env.PORT || 3000;
 
 // Writing route to send message to user if connected
 // or persist message if not connected
-app.post('/sendMessage', async (req, res)=>{
+app.post('/sendMessage', async (req, res) => {
   try {
     let userid = req.body.user_id;
 
     // Checking parameters
-    if(userid == undefined || userid.length == 0){
+    if (userid == undefined || userid.length == 0) {
       res.send({
         errorCode: 400,
         success: false,
@@ -33,17 +33,17 @@ app.post('/sendMessage', async (req, res)=>{
 
     //Handling persistence
     const result = await redis.handleMessage(userid, 'hello');
-    if(result.success && result.immediate){
+    if (result.success && result.immediate) {
       console.log('sending');
       socketInstance.to(userid).emit('newMessage', 'hello');
       socketInstance.emit('action', 'hello');
     }
-    else if(result.success && !result.immediate){
+    else if (result.success && !result.immediate) {
       console.log('Persisting Message');
     }
     else
       console.log('Persisting Error => ', result.error);
-    
+
     // Sending Message to user
     res.send({
       errorCode: 200,
@@ -64,8 +64,8 @@ app.post('/sendMessage', async (req, res)=>{
 
 
 // Starting express server
-const server = app.listen(PORT,()=>{ 
-    console.log('Server started on port: ' + PORT); 
+const server = app.listen(PORT, () => {
+  console.log('Server started on port: ' + PORT);
 });
 
 // Initializing socket on express server
@@ -78,19 +78,19 @@ io.on("connection", function (socket) {
   socketInstance = socket;
 
   /***** Handling Socket Connetion Starts *****/
-  socket.on("userID", async (userid)=>{
+  socket.on("userID", async (userid) => {
     socket.join(userid);
     console.log(`socket is joined ${userid}`);
-      
+
     const result = await redis.makeNewSocketConnection(userid, socket.id);
-    if(result.success){
+    if (result.success) {
       // Emitting Persistant messages
       console.log("EMITTING MESSAGES => ", result.messages);
-      result.messages.forEach((msg, index)=>{
+      result.messages.forEach((msg, index) => {
         socket.to(userid).emit("newMessage", msg);
       });
     }
-    else{
+    else {
       console.log('Connection Error => ', result.error);
     }
   });
@@ -99,10 +99,10 @@ io.on("connection", function (socket) {
   /***** Handling Socket Disconnect Starts *****/
   socket.on("disconnect", async () => {
     const response = await redis.disconnectSocketUser(socket.id);
-    if(response.success){
+    if (response.success) {
       console.log(`socket is disconnected ${socket.id}`);
     }
-    else{
+    else {
       console.log(`Disconnect Error => ${response.error}`);
     }
   });
