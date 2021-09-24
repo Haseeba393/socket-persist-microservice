@@ -1,5 +1,5 @@
 const Redis = require("ioredis");
-const RedisConfig = require('./redis-config.json');
+const RedisConfig = require('../redis-config.json');
 let redis = undefined;
 
 if (process.env.NODE_ENV === 'production') {

@@ -1,7 +1,7 @@
 var express = require('express');
 const socket = require("socket.io");
 var cors = require('cors');
-var redis = require('./redis/utils');
+var redis = require('./service/utils');
 
 // Configuring environment variables
 require('dotenv').config();
@@ -32,17 +32,24 @@ app.post('/sendMessage', async (req, res)=>{
     }
 
     //Handling persistence
-    const result = await redis.handleMessage(userid, 'hello');
+    const result = await redis.isUserConnected(userid, 'hello');
     if(result.success && result.immediate){
-      console.log('sending');
+      console.log('SENDING');
       socketInstance.to(userid).emit('newMessage', 'hello');
-      socketInstance.emit('action', 'hello');
     }
     else if(result.success && !result.immediate){
-      console.log('Persisting Message');
+      console.log('PERSISTING MSG');
     }
     else
-      console.log('Persisting Error => ', result.error);
+    {
+      console.log('SENDING ERROR => ', result.error);
+      res.send({
+        errorCode: 404,
+        success: false,
+        message: result.error,
+      });
+      return;
+    }
     
     // Sending Message to user
     res.send({
@@ -80,9 +87,10 @@ io.on("connection", function (socket) {
   /***** Handling Socket Connetion Starts *****/
   socket.on("userID", async (userid)=>{
     socket.join(userid);
+
     console.log(`socket is joined ${userid}`);
       
-    const result = await redis.makeNewSocketConnection(userid, socket.id);
+    const result = await redis.newConnection(userid, socket.id);
     if(result.success){
       // Emitting Persistant messages
       console.log("EMITTING MESSAGES => ", result.messages);
@@ -98,7 +106,7 @@ io.on("connection", function (socket) {
 
   /***** Handling Socket Disconnect Starts *****/
   socket.on("disconnect", async () => {
-    const response = await redis.disconnectSocketUser(socket.id);
+    const response = await redis.disconnectConnection(socket.id);
     if(response.success){
       console.log(`socket is disconnected ${socket.id}`);
     }
