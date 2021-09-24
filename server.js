@@ -12,7 +12,7 @@ var socketInstance = undefined;
 // setting up the express server
 let app = express();
 app.use(express.json());
-app.use(cors());
+app.use(cors({origin:true}));
 let PORT = process.env.PORT || 3000; 
 
 // Writing route to send message to user if connected
