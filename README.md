@@ -5,8 +5,8 @@ An microservice that allows you to send messages to your clients via socket.io a
 ## Dependencies
 
 ```
-Node v15.4.0
-NPM 7.0.15
+Node v12.16.3
+NPM 7.24.1
 ```
 
 ## How to run locally
